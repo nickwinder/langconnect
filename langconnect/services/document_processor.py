@@ -16,6 +16,7 @@ HANDLERS = {
     "application/pdf": PDFMinerParser(),
     "text/plain": TextParser(),
     "text/html": BS4HTMLParser(),
+    "text/markdown": TextParser(),
     "application/msword": MsWordParser(),
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
         MsWordParser()
