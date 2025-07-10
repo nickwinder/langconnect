@@ -1,9 +1,6 @@
-from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-
-from langconnect.auth import AuthenticatedUser, resolve_user
+from fastapi import APIRouter, HTTPException, status
 from langconnect.database.collections import CollectionsManager
 from langconnect.models import CollectionCreate, CollectionResponse, CollectionUpdate
 
@@ -17,10 +14,9 @@ router = APIRouter(prefix="/collections", tags=["collections"])
 )
 async def collections_create(
     collection_data: CollectionCreate,
-    user: Annotated[AuthenticatedUser, Depends(resolve_user)],
 ):
     """Creates a new PGVector collection by name with optional metadata."""
-    collection_info = await CollectionsManager(user.identity).create(
+    collection_info = await CollectionsManager("anonymous").create(
         collection_data.name, collection_data.metadata
     )
     if not collection_info:
@@ -29,20 +25,19 @@ async def collections_create(
 
 
 @router.get("", response_model=list[CollectionResponse])
-async def collections_list(user: Annotated[AuthenticatedUser, Depends(resolve_user)]):
+async def collections_list():
     """Lists all available PGVector collections (name and UUID)."""
     return [
-        CollectionResponse(**c) for c in await CollectionsManager(user.identity).list()
+        CollectionResponse(**c) for c in await CollectionsManager("anonymous").list()
     ]
 
 
 @router.get("/{collection_id}", response_model=CollectionResponse)
 async def collections_get(
-    user: Annotated[AuthenticatedUser, Depends(resolve_user)],
     collection_id: UUID,
 ):
     """Retrieves details (name and UUID) of a specific PGVector collection."""
-    collection = await CollectionsManager(user.identity).get(str(collection_id))
+    collection = await CollectionsManager("anonymous").get(str(collection_id))
     if not collection:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -53,22 +48,20 @@ async def collections_get(
 
 @router.delete("/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def collections_delete(
-    user: Annotated[AuthenticatedUser, Depends(resolve_user)],
     collection_id: UUID,
 ):
     """Deletes a specific PGVector collection by name."""
-    await CollectionsManager(user.identity).delete(str(collection_id))
+    await CollectionsManager("anonymous").delete(str(collection_id))
     return "Collection deleted successfully."
 
 
 @router.patch("/{collection_id}", response_model=CollectionResponse)
 async def collections_update(
-    user: Annotated[AuthenticatedUser, Depends(resolve_user)],
     collection_id: UUID,
     collection_data: CollectionUpdate,
 ):
     """Updates a specific PGVector collection's name and/or metadata."""
-    updated_collection = await CollectionsManager(user.identity).update(
+    updated_collection = await CollectionsManager("anonymous").update(
         str(collection_id),
         name=collection_data.name,
         metadata=collection_data.metadata,

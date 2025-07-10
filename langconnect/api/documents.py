@@ -1,12 +1,12 @@
 import logging
-from typing import Annotated, Any
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from langchain_core.documents import Document
 from pydantic import TypeAdapter, ValidationError
 
-from langconnect.auth import AuthenticatedUser, resolve_user
+
 from langconnect.database.collections import Collection
 from langconnect.models import DocumentResponse, SearchQuery, SearchResult
 from langconnect.services import process_document
@@ -21,7 +21,6 @@ router = APIRouter(tags=["documents"])
 
 @router.post("/collections/{collection_id}/documents", response_model=dict[str, Any])
 async def documents_create(
-    user: Annotated[AuthenticatedUser, Depends(resolve_user)],
     collection_id: UUID,
     files: list[UploadFile] = File(...),
     metadatas_json: str | None = Form(None),
@@ -87,7 +86,7 @@ async def documents_create(
     try:
         collection = Collection(
             collection_id=str(collection_id),
-            user_id=user.identity,
+            user_id="anonymous",
         )
         added_ids = await collection.upsert(docs_to_index)
         if not added_ids:
@@ -132,7 +131,6 @@ async def documents_create(
     "/collections/{collection_id}/documents", response_model=list[DocumentResponse]
 )
 async def documents_list(
-    user: Annotated[AuthenticatedUser, Depends(resolve_user)],
     collection_id: UUID,
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -140,7 +138,7 @@ async def documents_list(
     """Lists documents within a specific collection."""
     collection = Collection(
         collection_id=str(collection_id),
-        user_id=user.identity,
+        user_id="anonymous",
     )
     return await collection.list(limit=limit, offset=offset)
 
@@ -150,14 +148,13 @@ async def documents_list(
     response_model=dict[str, bool],
 )
 async def documents_delete(
-    user: Annotated[AuthenticatedUser, Depends(resolve_user)],
     collection_id: UUID,
     document_id: str,
 ):
     """Deletes a specific document from a collection by its ID."""
     collection = Collection(
         collection_id=str(collection_id),
-        user_id=user.identity,
+        user_id="anonymous",
     )
     # TODO(Eugene): Deletion logic does not look correct.
     #  Should I be deleting by ID or file ID?
@@ -172,7 +169,6 @@ async def documents_delete(
     "/collections/{collection_id}/documents/search", response_model=list[SearchResult]
 )
 async def documents_search(
-    user: Annotated[AuthenticatedUser, Depends(resolve_user)],
     collection_id: UUID,
     search_query: SearchQuery,
 ):
@@ -182,7 +178,7 @@ async def documents_search(
 
     collection = Collection(
         collection_id=str(collection_id),
-        user_id=user.identity,
+        user_id="anonymous",
     )
 
     results = await collection.search(
